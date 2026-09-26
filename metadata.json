@@ -1,0 +1,6 @@
+{
+  "name": "SeriesRadar - Serien in Planung & Release Tracker",
+  "description": "Android App-Prototyp & Architektur-Guide für neue Serien in Planung mit aktuellem Produktionsstatus, US-Start und deutschem Starttermin inklusive API-Quellen.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
