@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bookmark, Film, Trash2, Calendar, ChevronRight, Check } from 'lucide-react';
+import { Bookmark, Film, Trash2, Calendar, ChevronRight, Check, Bell, Sparkles, Settings } from 'lucide-react';
 import { SeriesItem } from '../types/series';
 
 interface WatchlistViewProps {
@@ -8,6 +8,8 @@ interface WatchlistViewProps {
   onToggleBookmark: (id: string) => void;
   onSelectSeries: (series: SeriesItem) => void;
   onExploreMore: () => void;
+  onOpenNotifications: () => void;
+  onSimulateUpdate: (series?: SeriesItem) => void;
 }
 
 export const WatchlistView: React.FC<WatchlistViewProps> = ({
@@ -16,6 +18,8 @@ export const WatchlistView: React.FC<WatchlistViewProps> = ({
   onToggleBookmark,
   onSelectSeries,
   onExploreMore,
+  onOpenNotifications,
+  onSimulateUpdate,
 }) => {
   const bookmarkedSeries = seriesList.filter((s) => bookmarkedIds.includes(s.id));
 
@@ -30,7 +34,7 @@ export const WatchlistView: React.FC<WatchlistViewProps> = ({
           </div>
           <span className="text-[10px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1 font-medium">
             <Check className="w-2.5 h-2.5" />
-            <span>Alarme an</span>
+            <span>Alarme aktiv</span>
           </span>
         </div>
 
@@ -40,6 +44,37 @@ export const WatchlistView: React.FC<WatchlistViewProps> = ({
         <p className="text-[11px] sm:text-xs text-slate-300 mt-0.5 leading-relaxed">
           Aktuell befinden sich <strong className="text-amber-400 font-mono-numbers">{bookmarkedSeries.length}</strong> Serien auf deinem Release-Radar.
         </p>
+
+        {/* Notification Status Action Card */}
+        {bookmarkedSeries.length > 0 && (
+          <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+              <Bell className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Lokale Push-Alarme aktiv</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => onSimulateUpdate()}
+                className="px-2.5 py-1 bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 border border-amber-400/30 rounded-lg text-[10px] font-semibold transition-colors flex items-center gap-1"
+                title="Löst eine Probe-Benachrichtigung für eine gemerkte Serie aus"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Test-Alarm auslösen</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenNotifications}
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                title="Benachrichtigungs-Einstellungen"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bookmarked Series Cards */}
@@ -50,7 +85,7 @@ export const WatchlistView: React.FC<WatchlistViewProps> = ({
           </div>
           <h3 className="text-sm font-bold text-slate-200">Noch keine Serien gemerkt</h3>
           <p className="text-[11px] text-slate-400 max-w-xs mx-auto mt-1 leading-relaxed">
-            Klicke bei einer Serie auf das Lesezeichen, um Veröffentlichungsdaten im Blick zu behalten.
+            Klicke bei einer Serie auf das Lesezeichen, um automatische Erinnerungen bei Status- und Terminänderungen zu erhalten.
           </p>
           <button
             onClick={onExploreMore}
@@ -81,6 +116,18 @@ export const WatchlistView: React.FC<WatchlistViewProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1 shrink-0 ml-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSimulateUpdate(series);
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors text-[10px] flex items-center gap-1"
+                    title="Probe-Alarm für diese Serie auslösen"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  </button>
+
                   <button
                     type="button"
                     onClick={(e) => {

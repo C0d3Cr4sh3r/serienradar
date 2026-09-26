@@ -9,8 +9,20 @@ import { WatchlistView } from './components/WatchlistView';
 import { SourcesGuideView } from './components/SourcesGuideView';
 import { AddCustomSeriesModal } from './components/AddCustomSeriesModal';
 import { ScreenshotStudioModal } from './components/ScreenshotStudioModal';
+import { AndroidPushBanner } from './components/AndroidPushBanner';
+import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { INITIAL_SERIES_DATA } from './data/mockSeries';
 import { SeriesItem, ProductionStage } from './types/series';
+import { AppNotification, NotificationSettings } from './types/notifications';
+import {
+  getStoredNotifications,
+  saveNotifications,
+  getNotificationSettings,
+  saveNotificationSettings,
+  checkForSeriesUpdates,
+  simulateSeriesStatusChange,
+  triggerBrowserNotification,
+} from './services/notificationService';
 import { fetchLiveUpcomingShows } from './services/tvmazeApi';
 import { Search, Film, X, RefreshCw, CheckCircle2 } from 'lucide-react';
 
@@ -37,6 +49,12 @@ export default function App() {
     }
     return ['hp-hbo', 'blade-runner-2099', 'alien-earth'];
   });
+
+  // Notifications State
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => getStoredNotifications());
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() => getNotificationSettings());
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [activePushNotification, setActivePushNotification] = useState<AppNotification | null>(null);
 
   const [currentTab, setCurrentTab] = useState<'feed' | 'timeline' | 'watchlist' | 'sources'>('feed');
   const [isMobileMode, setIsMobileMode] = useState(true);
@@ -68,6 +86,28 @@ export default function App() {
       // Ignore
     }
   }, [seriesList]);
+
+  // Sync notifications to localStorage
+  useEffect(() => {
+    saveNotifications(notifications);
+  }, [notifications]);
+
+  // Sync notification settings to localStorage
+  useEffect(() => {
+    saveNotificationSettings(notificationSettings);
+  }, [notificationSettings]);
+
+  // Automatic change detection on watched series
+  useEffect(() => {
+    const newAlerts = checkForSeriesUpdates(seriesList, bookmarkedIds);
+    if (newAlerts.length > 0) {
+      setNotifications((prev) => [...newAlerts, ...prev]);
+      setActivePushNotification(newAlerts[0]);
+      if (notificationSettings.browserNotifications) {
+        triggerBrowserNotification(newAlerts[0].title, newAlerts[0].message);
+      }
+    }
+  }, [seriesList, bookmarkedIds]);
 
   const toggleBookmark = (id: string) => {
     setBookmarkedIds((prev) =>
@@ -103,6 +143,42 @@ export default function App() {
     }
   };
 
+  // Simulate a status change for a series on the watchlist
+  const handleSimulateUpdate = (targetSeries?: SeriesItem) => {
+    const target = targetSeries || seriesList.find((s) => bookmarkedIds.includes(s.id)) || seriesList[0];
+    if (!target) return;
+
+    // Ensure it is in watchlist
+    if (!bookmarkedIds.includes(target.id)) {
+      setBookmarkedIds((prev) => [...prev, target.id]);
+    }
+
+    const { updatedSeries, notification } = simulateSeriesStatusChange(target);
+
+    // Update seriesList
+    setSeriesList((prev) => prev.map((s) => (s.id === updatedSeries.id ? updatedSeries : s)));
+
+    // Prepend notification
+    setNotifications((prev) => [notification, ...prev]);
+
+    // Show heads-up push banner
+    setActivePushNotification(notification);
+
+    // Trigger browser notification if allowed
+    if (notificationSettings.browserNotifications) {
+      triggerBrowserNotification(notification.title, notification.message);
+    }
+  };
+
+  const handleOpenSeriesFromNotification = (seriesId: string) => {
+    const found = seriesList.find((s) => s.id === seriesId);
+    if (found) {
+      setActiveModalSeries(found);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
   // Filtered series for Feed
   const filteredSeries = seriesList.filter((series) => {
     if (searchQuery.trim()) {
@@ -137,12 +213,21 @@ export default function App() {
       onToggleMode={setIsMobileMode}
       onOpenScreenshots={() => setIsScreenshotModalOpen(true)}
     >
+      {/* Native Heads-up Push Notification Banner */}
+      <AndroidPushBanner
+        notification={activePushNotification}
+        onDismiss={() => setActivePushNotification(null)}
+        onOpenSeries={handleOpenSeriesFromNotification}
+      />
+
       {/* Top Header Bar */}
       <TopBar
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         watchlistCount={bookmarkedIds.length}
+        unreadNotificationsCount={unreadCount}
         onOpenAddModal={() => setIsAddModalOpen(true)}
+        onOpenNotifications={() => setIsNotificationCenterOpen(true)}
         isMobile={isMobileMode}
       />
 
@@ -340,6 +425,8 @@ export default function App() {
             onToggleBookmark={toggleBookmark}
             onSelectSeries={(s) => setActiveModalSeries(s)}
             onExploreMore={() => setCurrentTab('feed')}
+            onOpenNotifications={() => setIsNotificationCenterOpen(true)}
+            onSimulateUpdate={handleSimulateUpdate}
           />
         )}
 
@@ -368,6 +455,19 @@ export default function App() {
       <ScreenshotStudioModal
         isOpen={isScreenshotModalOpen}
         onClose={() => setIsScreenshotModalOpen(false)}
+      />
+
+      {/* Notification Center Modal */}
+      <NotificationCenterModal
+        isOpen={isNotificationCenterOpen}
+        onClose={() => setIsNotificationCenterOpen(false)}
+        notifications={notifications}
+        settings={notificationSettings}
+        onUpdateSettings={setNotificationSettings}
+        onMarkAllAsRead={() => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))}
+        onClearAll={() => setNotifications([])}
+        onSelectSeries={handleOpenSeriesFromNotification}
+        onSimulateUpdate={() => handleSimulateUpdate()}
       />
 
       {/* Mobile Fixed Bottom Navigation */}

@@ -1,11 +1,13 @@
 import React from 'react';
-import { Plus, Bookmark } from 'lucide-react';
+import { Plus, Bell } from 'lucide-react';
 
 interface TopBarProps {
   currentTab: 'feed' | 'timeline' | 'watchlist' | 'sources';
   onSelectTab: (tab: 'feed' | 'timeline' | 'watchlist' | 'sources') => void;
   watchlistCount: number;
+  unreadNotificationsCount: number;
   onOpenAddModal: () => void;
+  onOpenNotifications: () => void;
   isMobile: boolean;
 }
 
@@ -13,7 +15,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   currentTab,
   onSelectTab,
   watchlistCount,
+  unreadNotificationsCount,
   onOpenAddModal,
+  onOpenNotifications,
   isMobile,
 }) => {
   return (
@@ -73,8 +77,25 @@ export const TopBar: React.FC<TopBarProps> = ({
         </nav>
       )}
 
-      {/* Zone 3: 1-2 primary actions */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* Zone 3: Notification Bell & Action buttons */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {/* Bell Button */}
+        <button
+          type="button"
+          onClick={onOpenNotifications}
+          className="relative min-h-[36px] min-w-[36px] p-2 rounded-xl text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors flex items-center justify-center"
+          title="Benachrichtigungen & Watchlist-Alarme"
+          aria-label="Benachrichtigungen öffnen"
+        >
+          <Bell className="w-4 h-4" />
+          {unreadNotificationsCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold font-mono-numbers flex items-center justify-center ring-2 ring-[#090d16] animate-pulse">
+              {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+            </span>
+          )}
+        </button>
+
+        {/* Add Series Button */}
         <button
           onClick={onOpenAddModal}
           className="min-h-[36px] px-3 py-1.5 text-xs font-semibold text-slate-950 bg-amber-400 hover:bg-amber-300 active:scale-[0.98] rounded-xl transition-all flex items-center gap-1 whitespace-nowrap shadow-sm shadow-amber-950/40"
